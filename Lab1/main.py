@@ -150,6 +150,10 @@ class SegmentTree:
         if search_root is None:
             return
 
+        if search_root.left is None or search_root.right is None:
+            self.check_segment_node(search_root)
+            return
+
         while search_root.right.data.left_index >= self.x_cords[1]:
             search_root = search_root.left
             if search_root.right is None:
@@ -179,7 +183,7 @@ class SegmentTree:
 
     @staticmethod
     def check_axis_y(to_check_y, down, up) -> bool:
-        return down < to_check_y < up
+        return down <= to_check_y <= up
 
     def check_segment_node(self, node: Node):
         # Add nested segments
@@ -197,7 +201,7 @@ class SegmentTree:
         return res
 
     def check_left(self, left_node: Node):
-        while left_node.left is not None and left_node.left.data.right_index > self.x_cords[1]:
+        while left_node is not None and left_node.left is not None and left_node.left.data.right_index > self.x_cords[1]:
             left_node = left_node.left
 
         self.check_segment_node(left_node)

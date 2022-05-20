@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 
+
 class Point:
     """
     Default class of points with all interrelation
@@ -205,9 +206,12 @@ class Tree:
         with open("data/graph_viz.txt", mode='w+') as data_file:
             data_file.write(wrapper[0])
 
-    def plot_points(self, figure, axes):
+    def plot_points(self, figure, axes, res_points):
         for index, point in enumerate(self.sorted_array):
-            axes.scatter([point.x], [point.y], color="red")
+            if point in res_points:
+                axes.scatter([point.x], [point.y], color="green")
+            else:
+                axes.scatter([point.x], [point.y], color="red")
             axes.annotate(f"({index}) ({point.x}; {point.y})", (point.x, point.y),
                           xytext=(point.x - 0.025, point.y + 0.1))
 
@@ -244,7 +248,6 @@ def read_data_from_file(filepath: str):
                     points_list.append(Point(value_list[1], value_list[2]))
                     points_quantity += 1
 
-
             return points_list, search_list
     except FileNotFoundError as err:
         print('File do not exist')
@@ -258,9 +261,9 @@ if __name__ == "__main__":
     point_list, search_list = read_data_from_file("data/data.txt")
     tree = Tree(point_list)
     tree.graph_viz()
-    print(tree.find(search_list))
+    res_points = tree.find(search_list)
 
     figure, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
-    tree.plot_points(figure, axes)
+    tree.plot_points(figure, axes, res_points)
     tree.plot_region(axes, search_list)
     plt.show()

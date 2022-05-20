@@ -123,6 +123,8 @@ def make_clusters(sorted_list):
             result_list.append(sorted(temp_list.copy(), key=lambda point: point.y))
             temp_list.clear()
             temp_list.append(item)
+    if len(temp_list) != 0:
+        result_list.append(temp_list)
     return result_list
 
 
@@ -239,11 +241,15 @@ class SegmentTree:
         with open("data/graph_viz.txt", mode='w+') as data_file:
             data_file.write(wrapper[0])
 
-    def plot_points(self, figure, axes, points):
+    def plot_points(self, figure, axes, points, res_points):
         for index, point in enumerate(points):
-            axes.scatter([point.x], [point.y], color="red")
-            axes.annotate(f"({point.x}; {point.y})", (point.x, point.y),
-                          xytext=(point.x - 0.025, point.y + 0.1))
+            if point in res_points:
+                axes.scatter([point.x], [point.y], color="green")
+            else:
+                axes.scatter([point.x], [point.y], color="red")
+                print(f"Point red: {point}")
+            # axes.annotate(f"({point.x}; {point.y})", (point.x, point.y),
+            #               xytext=(point.x - 0.025, point.y + 0.1))
 
     def plot_region(self, axes, search_region):
         width = search_region[1].x - search_region[0].x
@@ -264,6 +270,6 @@ if __name__ == "__main__":
     tree.graph_viz()
 
     figure, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
-    tree.plot_points(figure, axes, sorted(point_list, key=lambda point: point.x))
+    tree.plot_points(figure, axes, sorted(point_list, key=lambda point: point.x), tree.result)
     tree.plot_region(axes, search_list)
     plt.show()

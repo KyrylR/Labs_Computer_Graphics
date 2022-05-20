@@ -230,23 +230,20 @@ def read_data_from_file(filepath: str):
     """
     try:
         with open(filepath, mode='r+') as data_file:
-            init_val = False
             points_quantity, counter = -1, 0
             points_list = []
             search_list = []
             for line in data_file:
                 if not line.startswith("#"):
-                    if not init_val:
-                        points_quantity = int(line.strip())
-                        init_val = True
-                        continue
-                    if counter < points_quantity:
-                        value_list = list(map(int, line.split(" ")))
-                        points_list.append(Point(value_list[0], value_list[1]))
+                    if counter < 2:
+                        value_list = list(map(int, line.split()))
+                        search_list.append(Point(value_list[0], value_list[1]))
                         counter += 1
                         continue
-                    value_list = list(map(int, line.split()))
-                    search_list.append(Point(value_list[0], value_list[1]))
+                    value_list = list(map(int, line.split(" ")))
+                    points_list.append(Point(value_list[1], value_list[2]))
+                    points_quantity += 1
+
 
             return points_list, search_list
     except FileNotFoundError as err:

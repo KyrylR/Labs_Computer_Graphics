@@ -13,23 +13,19 @@ def read_data_from_file(filepath: str):
     """
     try:
         with open(filepath, mode='r+') as data_file:
-            init_val = False
             points_quantity, counter = -1, 0
             points_list = []
             search_list = []
             for line in data_file:
                 if not line.startswith("#"):
-                    if not init_val:
-                        points_quantity = int(line.strip())
-                        init_val = True
-                        continue
-                    if counter < points_quantity:
-                        value_list = list(map(int, line.split(" ")))
-                        points_list.append(Point(value_list[0], value_list[1]))
+                    if counter < 2:
+                        value_list = list(map(int, line.split()))
+                        search_list.append(Point(value_list[0], value_list[1]))
                         counter += 1
                         continue
-                    value_list = list(map(int, line.split()))
-                    search_list.append(Point(value_list[0], value_list[1]))
+                    value_list = list(map(int, line.split(" ")))
+                    points_list.append(Point(value_list[1], value_list[2]))
+                    points_quantity += 1
 
             return points_list, search_list
     except FileNotFoundError as err:
@@ -117,33 +113,60 @@ class Node:
             self.right.graph_viz(string_mutable)
 
 
+def make_clusters(sorted_list):
+    result_list = []
+    temp_list = []
+    for item in sorted_list:
+        if len(temp_list) == 0 or temp_list[-1].x == item.x:
+            temp_list.append(item)
+        else:
+            result_list.append(sorted(temp_list.copy(), key=lambda point: point.y))
+            temp_list.clear()
+            temp_list.append(item)
+    return result_list
+
+
+def get_cluster_x(cluster):
+    val = cluster[0]
+    return val.x
+
+
+def get_cluster_y(cluster):
+    val = cluster[0]
+    return val.y
+
+
 class SegmentTree:
     """
     Build segment tree of given points of type Point.
     """
-    __slots__ = ['root', 'x_cords', 'y_cords', 'result']
+    __slots__ = ['root', 'x_cords', 'y_cords', 'result', 'counter']
 
     def __init__(self, points_list: list, search_area: list):
-        point_list.sort(key=lambda point: point.x)
-        self.root = self.build_tree(points_list, points_list[0].x, points_list[-1].x)
+        points_list = make_clusters(sorted(point_list, key=lambda point: point.x))
+        self.root = self.build_tree(points_list, get_cluster_x(points_list[0]), get_cluster_x(points_list[-1]))
         self.x_cords = (min(search_area[0].x, search_area[1].x), max(search_area[0].x, search_area[1].x))
         self.y_cords = (min(search_area[0].y, search_area[1].y), max(search_area[0].y, search_area[1].y))
         self.result = []
+        self.counter = 0
 
     def build_tree(self, points_list: list, left_index, right_index) -> Node:
         if len(points_list) == 1:
-            return Node(NodeData(points_list[0].x, points_list[-1].x + 1, points_list), None, None)
+            return Node(NodeData(get_cluster_x(points_list[0]), get_cluster_x(points_list[-1]) + 1, points_list), None,
+                        None)
         median = math.floor((1 + len(points_list)) / 2)
         left_list = points_list[:median]
-        left = self.build_tree(left_list, points_list[0].x, points_list[-1].x)
+        left = self.build_tree(left_list, get_cluster_x(points_list[0]), get_cluster_x(points_list[-1]))
         median = math.floor((1 + len(points_list)) / 2)
         right_list = points_list[median:]
-        right = self.build_tree(right_list, points_list[0].x, points_list[-1].x)
-        return Node(NodeData(points_list[0].x, points_list[-1].x + 1, self.sort_by_y(points_list)), left, right)
+        right = self.build_tree(right_list, get_cluster_x(points_list[0]), get_cluster_x(points_list[-1]))
+        return Node(
+            NodeData(get_cluster_x(points_list[0]), get_cluster_x(points_list[-1]) + 1, self.sort_by_y(points_list)),
+            left, right)
 
     @staticmethod
     def sort_by_y(to_sort: list):
-        return sorted(to_sort, key=lambda points: points.y)
+        return sorted(to_sort, key=lambda points: get_cluster_y(points))
 
     def query(self):
         search_root = self.root
@@ -188,23 +211,23 @@ class SegmentTree:
     def check_segment_node(self, node: Node):
         # Add nested segments
         res = False
+        self.counter += 1
         if node is None:
             return res
         if self.x_cords[0] <= node.data.left_index:
             if self.x_cords[1] >= node.data.right_index:
                 res = True
                 for item in node.data.sorted_y:
-                    if self.check_axis_y(item.y, self.y_cords[0], self.y_cords[1]):
-                        self.result.append(item)
+                    for cluster in item:
+                        if self.check_axis_y(cluster.y, self.y_cords[0], self.y_cords[1]):
+                            self.result.append(cluster)
             else:
-                self.check_left(node.left)
+                if node.right is not None:
+                    self.query_right(node)
+        else:
+            if node.left is not None:
+                self.query_left(node)
         return res
-
-    def check_left(self, left_node: Node):
-        while left_node is not None and left_node.left is not None and left_node.left.data.right_index > self.x_cords[1]:
-            left_node = left_node.left
-
-        self.check_segment_node(left_node)
 
     def graph_viz(self):
         string = "digraph g {\n"
@@ -216,8 +239,8 @@ class SegmentTree:
         with open("data/graph_viz.txt", mode='w+') as data_file:
             data_file.write(wrapper[0])
 
-    def plot_points(self, figure, axes):
-        for index, point in enumerate(self.root.data.sorted_y):
+    def plot_points(self, figure, axes, points):
+        for index, point in enumerate(points):
             axes.scatter([point.x], [point.y], color="red")
             axes.annotate(f"({point.x}; {point.y})", (point.x, point.y),
                           xytext=(point.x - 0.025, point.y + 0.1))
@@ -237,9 +260,10 @@ if __name__ == "__main__":
     tree.query()
     print(f"Result(Points): {tree.result}")
     print(f"Result(Size): {len(tree.result)}")
+    print(f"Counter: {tree.counter}")
     tree.graph_viz()
 
     figure, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
-    tree.plot_points(figure, axes)
+    tree.plot_points(figure, axes, sorted(point_list, key=lambda point: point.x))
     tree.plot_region(axes, search_list)
     plt.show()

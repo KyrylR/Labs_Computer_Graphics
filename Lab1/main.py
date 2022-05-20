@@ -2,8 +2,6 @@ import math
 
 from matplotlib import patches, pyplot as plt
 
-print([1, 2, 3, 4, 5][2:])
-
 
 def read_data_from_file(filepath: str):
     """
@@ -52,12 +50,6 @@ class Point:
     def __init__(self, x=0, y=0):
         self.x = x
         self.y = y
-
-    def grater_only_x(self, other):
-        return self.x > other.x
-
-    def grater_only_y(self, other):
-        return self.y > other.y
 
     def __eq__(self, other):
         return self.x == other.x and self.y == other.y
@@ -125,14 +117,6 @@ class Node:
             self.right.graph_viz(string_mutable)
 
 
-def sort_by_y(to_sort: list):
-    return sorted(to_sort, key=lambda points: points.y)
-
-
-def check_axis_y(to_check_y, down, up) -> bool:
-    return down <= to_check_y <= up
-
-
 class SegmentTree:
     """
     Build segment tree of given points of type Point.
@@ -155,7 +139,68 @@ class SegmentTree:
         median = math.floor((1 + len(points_list)) / 2)
         right_list = points_list[median:]
         right = self.build_tree(right_list, points_list[0].x, points_list[-1].x)
-        return Node(NodeData(points_list[0].x, points_list[-1].x + 1, sort_by_y(points_list)), left, right)
+        return Node(NodeData(points_list[0].x, points_list[-1].x + 1, self.sort_by_y(points_list)), left, right)
+
+    @staticmethod
+    def sort_by_y(to_sort: list):
+        return sorted(to_sort, key=lambda points: points.y)
+
+    def query(self):
+        search_root = self.root
+        if search_root is None:
+            return
+
+        while search_root.right.data.left_index >= self.x_cords[1]:
+            search_root = search_root.left
+            if search_root.right is None:
+                self.check_segment_node(search_root)
+                return
+
+        while search_root.left.data.right_index <= self.x_cords[0]:
+            search_root = search_root.right
+            if search_root.left is None:
+                self.check_segment_node(search_root)
+                return
+
+        self.query_left(search_root.left)
+        self.query_right(search_root.right)
+
+    def query_left(self, left_node: Node):
+        if left_node.right is None:
+            self.check_segment_node(left_node)
+        if self.check_segment_node(left_node.right):
+            self.query_left(left_node.left)
+
+    def query_right(self, right_node: Node):
+        if right_node.left is None:
+            self.check_segment_node(right_node)
+        if self.check_segment_node(right_node.left):
+            self.query_right(right_node.right)
+
+    @staticmethod
+    def check_axis_y(to_check_y, down, up) -> bool:
+        return down < to_check_y < up
+
+    def check_segment_node(self, node: Node):
+        # Add nested segments
+        res = False
+        if node is None:
+            return res
+        if self.x_cords[0] <= node.data.left_index:
+            if self.x_cords[1] >= node.data.right_index:
+                res = True
+                for item in node.data.sorted_y:
+                    if self.check_axis_y(item.y, self.y_cords[0], self.y_cords[1]):
+                        self.result.append(item)
+            else:
+                self.check_left(node.left)
+        return res
+
+    def check_left(self, left_node: Node):
+        while left_node.left is not None and left_node.left.data.right_index > self.x_cords[1]:
+            left_node = left_node.left
+
+        self.check_segment_node(left_node)
 
     def graph_viz(self):
         string = "digraph g {\n"
@@ -181,52 +226,14 @@ class SegmentTree:
                                  facecolor='none')
         axes.add_patch(rect)
 
-    def query(self):
-        search_root = self.root
-        # TODO with None
-        if search_root is None:
-            return
-
-        while search_root.right.data.left_index >= self.x_cords[1]:
-            search_root = search_root.left
-            if search_root is None:
-                return
-
-        while search_root.left.data.right_index <= self.x_cords[0]:
-            search_root = search_root.right
-            if search_root is None:
-                return
-
-        self.query_left(search_root.left)
-        self.query_right(search_root.right)
-
-    def query_left(self, left_node: Node):
-        if self.check_segment(left_node.right):
-            self.query_left(left_node.left)
-
-    def query_right(self, right_node: Node):
-        if self.check_segment(right_node.left):
-            self.query_right(right_node.right)
-
-    def check_segment(self, node: Node):
-        # Add nested segments
-        res = False
-        if node is None:
-            return res
-        if self.x_cords[0] <= node.data.left_index and self.x_cords[1] >= node.data.right_index:
-            res = True
-            for item in node.data.sorted_y:
-                if check_axis_y(item.y, self.y_cords[0], self.y_cords[1]):
-                    self.result.append(item)
-        return res
-
 
 if __name__ == "__main__":
     point_list, search_list = read_data_from_file("data/data.txt")
     tree = SegmentTree(point_list, search_list)
     tree.query()
-    print(tree.result)
-    print(tree.graph_viz())
+    print(f"Result(Points): {tree.result}")
+    print(f"Result(Size): {len(tree.result)}")
+    tree.graph_viz()
 
     figure, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
     tree.plot_points(figure, axes)

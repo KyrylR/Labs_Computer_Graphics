@@ -215,7 +215,8 @@ class Tree:
         width = search_region[1].x - search_region[0].x
         height = search_region[1].y - search_region[0].y
 
-        rect = patches.Rectangle((search_region[0].x, search_region[0].y), width, height, linewidth=1, edgecolor='b', facecolor='none')
+        rect = patches.Rectangle((search_region[0].x, search_region[0].y), width, height,
+                                 linewidth=1, edgecolor='b', facecolor='none')
         axes.add_patch(rect)
 
 

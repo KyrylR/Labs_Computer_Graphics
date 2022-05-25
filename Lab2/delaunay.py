@@ -194,9 +194,21 @@ class Delaunay:
 
         return vor_coors, regions
 
+    def exportCircles(self):
+        """Export the circumcircles as a list of (center, radius)
+        """
+        # Remember to compute circumcircles if not done before
+        # for t in self.triangles:
+        #     self.circles[t] = self.circumcenter(t)
+
+        # Filter out triangles with any vertex in the extended BBox
+        # Do sqrt of radius before of return
+        return [(self.circles[(a, b, c)][0], sqrt(self.circles[(a, b, c)][1]))
+                for (a, b, c) in self.triangles if a > 3 and b > 3 and c > 3]
+
 
 if __name__ == "__main__":
-    numSeeds = 24
+    numSeeds = 12
     radius_loc = 100
     seeds = radius_loc * np.random.random((numSeeds, 2))
     center_loc = np.mean(seeds, axis=0)
@@ -216,6 +228,8 @@ if __name__ == "__main__":
             for t in dt2.get_triangles():
                 polygon = [seeds[i] for i in t]  # Build polygon for each region
                 plt.fill(*zip(*polygon), fill=False, color="b")  # Plot filled polygon
+            for c, r in dt2.exportCircles():
+                ax.add_artist(plt.Circle(c, r, color='k', fill=False, ls='dotted'))
 
             plt.show()
 
@@ -229,6 +243,7 @@ if __name__ == "__main__":
     cx, cy = zip(*seeds)
     dt_tris = dt2.get_triangles()
     ax.triplot(matplotlib.tri.Triangulation(cx, cy, dt_tris), '-')
+
 
     # Build Voronoi diagram as a list of coordinates and regions
     vc, vr = dt2.export_voronoi_regions()

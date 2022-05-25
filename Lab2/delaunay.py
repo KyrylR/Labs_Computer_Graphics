@@ -4,6 +4,7 @@ Simple structured Delaunay triangulation in 2D with incremental(Bowyer-Watson) a
 """
 import time
 
+import matplotlib
 import numpy as np
 from math import sqrt
 
@@ -156,6 +157,43 @@ class Delaunay:
         return [(a - 4, b - 4, c - 4)
                 for (a, b, c) in self.triangles if a > 3 and b > 3 and c > 3]
 
+    def export_voronoi_regions(self):
+        """Export coordinates and regions of Voronoi diagram as indexed data.
+        """
+        # Remember to compute circumcircles if not done before
+        # for t in self.triangles:
+        #     self.circles[t] = self.circumcenter(t)
+        useVertex = {i: [] for i in range(len(self.coords))}
+        vor_coors = []
+        index = {}
+        # Build a list of coordinates and one index per triangle/region
+        for tidx, (a, b, c) in enumerate(sorted(self.triangles)):
+            vor_coors.append(self.circles[(a, b, c)][0])
+            # Insert triangle, rotating it so the key is the "last" vertex
+            useVertex[a] += [(b, c, a)]
+            useVertex[b] += [(c, a, b)]
+            useVertex[c] += [(a, b, c)]
+            # Set tidx as the index to use with this triangle
+            index[(a, b, c)] = tidx
+            index[(c, a, b)] = tidx
+            index[(b, c, a)] = tidx
+
+        # init regions per coordinate dictionary
+        regions = {}
+        # Sort each region in a coherent order, and substitude each triangle
+        # by its index
+        for i in range(4, len(self.coords)):
+            v = useVertex[i][0][0]  # Get a vertex of a triangle
+            r = []
+            for _ in range(len(useVertex[i])):
+                # Search the triangle beginning with vertex v
+                t = [t for t in useVertex[i] if t[0] == v][0]
+                r.append(index[t])  # Add the index of this triangle to region
+                v = t[1]  # Choose the next vertex to search
+            regions[i - 4] = r  # Store region.
+
+        return vor_coors, regions
+
 
 if __name__ == "__main__":
     numSeeds = 24
@@ -166,8 +204,8 @@ if __name__ == "__main__":
     dt2 = Delaunay(center_loc, 50 * radius_loc)
     for i, s in enumerate(seeds):
         print("Inserting seed", i, s)
-        time.sleep(1)
         dt2.add_point(s)
+        time.sleep(0.5)
         if i > 1:
             fig, ax = plt.subplots()
             ax.margins(0.1)
@@ -180,3 +218,29 @@ if __name__ == "__main__":
                 plt.fill(*zip(*polygon), fill=False, color="b")  # Plot filled polygon
 
             plt.show()
+
+    # Create a plot with matplotlib.pyplot
+    fig, ax = plt.subplots()
+    ax.margins(0.1)
+    ax.set_aspect('equal')
+    plt.axis([-1, radius_loc + 1, -1, radius_loc + 1])
+
+    # Plot our Delaunay triangulation (plot in blue)
+    cx, cy = zip(*seeds)
+    dt_tris = dt2.get_triangles()
+    ax.triplot(matplotlib.tri.Triangulation(cx, cy, dt_tris), '-')
+
+    # Build Voronoi diagram as a list of coordinates and regions
+    vc, vr = dt2.export_voronoi_regions()
+
+    # Plot voronoi diagram edges (in red)
+    for r in vr:
+        polygon = [vc[i] for i in vr[r]]  # Build polygon for each region
+        plt.fill(*zip(*polygon), alpha=0.2)  # Plot filled polygon
+        plt.annotate("r%d" % r, xy=np.average(polygon, axis=0))
+
+    # Dump plot to file
+    # plt.savefig('output-delaunay2D.png', dpi=96)
+    # plt.savefig('output-delaunay2D.svg', dpi=96)
+
+    plt.show()

@@ -1,8 +1,21 @@
 import math
+from time import time
 
 from matplotlib import patches, pyplot as plt
 
 
+def performance(func):
+    def wrapper(*args, **kwargs):
+        t1 = time()
+        result = func(*args, **kwargs)
+        t2 = time()
+        print(f'It took {t2 - t1} s')
+        return result
+
+    return wrapper
+
+
+@performance
 def read_data_from_file(filepath: str):
     """
     Getting data with a list of points, as well as
@@ -23,8 +36,8 @@ def read_data_from_file(filepath: str):
                         search_list.append(Point(value_list[0], value_list[1]))
                         counter += 1
                         continue
-                    value_list = list(map(int, line.split(" ")))
-                    points_list.append(Point(value_list[1], value_list[2]))
+                    value_list = list(map(int, line.split()))
+                    points_list.append(Point(value_list[0], value_list[1]))
                     points_quantity += 1
 
             return points_list, search_list
@@ -144,10 +157,12 @@ class SegmentTree:
     """
     __slots__ = ['root', 'x_cords', 'y_cords', 'result', 'counter']
 
+    @performance
     def __init__(self, points_list: list, search_area: list):
         points_list = make_clusters(sorted(point_list, key=lambda point: point.x))
         self.root = self.build_tree(points_list, get_cluster_x(points_list[0]), get_cluster_x(points_list[-1]))
         self.x_cords = (min(search_area[0].x, search_area[1].x), max(search_area[0].x, search_area[1].x))
+        self.x_cords = (self.x_cords[0], self.x_cords[1] + 1)
         self.y_cords = (min(search_area[0].y, search_area[1].y), max(search_area[0].y, search_area[1].y))
         self.result = []
         self.counter = 0
@@ -168,8 +183,11 @@ class SegmentTree:
 
     @staticmethod
     def sort_by_y(to_sort: list):
-        return sorted(to_sort, key=lambda points: get_cluster_y(points))
+        seen = set()
+        sorted_list = sorted(to_sort, key=lambda points: get_cluster_y(points))
+        return [obj for obj in sorted_list if get_cluster_y(obj) not in seen and not seen.add(get_cluster_y(obj))]
 
+    @performance
     def query(self):
         search_root = self.root
         if search_root is None:
@@ -195,16 +213,24 @@ class SegmentTree:
         self.query_right(search_root.right)
 
     def query_left(self, left_node: Node):
+        if left_node is None:
+            return
         if left_node.right is None:
             self.check_segment_node(left_node)
         if self.check_segment_node(left_node.right):
             self.query_left(left_node.left)
+        # elif left_node.right is None:
+        #     self.check_segment_node(left_node)
 
     def query_right(self, right_node: Node):
+        if right_node is None:
+            return
         if right_node.left is None:
             self.check_segment_node(right_node)
         if self.check_segment_node(right_node.left):
             self.query_right(right_node.right)
+        # elif right_node.left is None:
+        #     self.check_segment_node(right_node)
 
     @staticmethod
     def check_axis_y(to_check_y, down, up) -> bool:
@@ -214,20 +240,25 @@ class SegmentTree:
         # Add nested segments
         res = False
         self.counter += 1
-        if node is None:
+        if node is None or node.data.right_index < self.x_cords[0] or node.data.left_index > self.x_cords[1]:
             return res
+
         if self.x_cords[0] <= node.data.left_index:
+            res = True
             if self.x_cords[1] >= node.data.right_index:
-                res = True
                 for item in node.data.sorted_y:
                     for cluster in item:
                         if self.check_axis_y(cluster.y, self.y_cords[0], self.y_cords[1]):
                             self.result.append(cluster)
+                node.data.sorted_y.clear()
             else:
                 if node.right is not None:
+                    res = True
+                    # self.query_right(node.right)
                     self.query_right(node)
         else:
             if node.left is not None:
+                # self.query_left(node.left)
                 self.query_left(node)
         return res
 
@@ -247,7 +278,7 @@ class SegmentTree:
                 axes.scatter([point.x], [point.y], color="green")
             else:
                 axes.scatter([point.x], [point.y], color="red")
-                print(f"Point red: {point}")
+                # print(f"Point red: {point}")
             # axes.annotate(f"({point.x}; {point.y})", (point.x, point.y),
             #               xytext=(point.x - 0.025, point.y + 0.1))
 
@@ -261,15 +292,25 @@ class SegmentTree:
 
 
 if __name__ == "__main__":
-    point_list, search_list = read_data_from_file("data/data.txt")
+    point_list, search_list = read_data_from_file("data/1000000points")
     tree = SegmentTree(point_list, search_list)
     tree.query()
-    print(f"Result(Points): {tree.result}")
-    print(f"Result(Size): {len(tree.result)}")
+    # print(f"Result(Points): {tree.result}")
     print(f"Counter: {tree.counter}")
-    tree.graph_viz()
+    print(f"Result(Size): {len(tree.result)}")
+    unique_res = []
+    counter = 0
+    for item in tree.result:
+        if item not in unique_res:
+            unique_res.append(item)
+        else:
+            counter += 1
+    print(f"Counter: {counter}")
+    tree.result = unique_res.copy()
+    print(f"Result(Size): {len(tree.result)}")
+    # tree.graph_viz()
 
-    figure, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
-    tree.plot_points(figure, axes, sorted(point_list, key=lambda point: point.x), tree.result)
-    tree.plot_region(axes, search_list)
-    plt.show()
+    # figure, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
+    # tree.plot_points(figure, axes, sorted(point_list, key=lambda point: point.x), tree.result)
+    # tree.plot_region(axes, search_list)
+    # plt.show()

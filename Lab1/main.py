@@ -294,7 +294,6 @@ if __name__ == "__main__":
     tree = SegmentTree(point_list, search_list)
     tree.query()
     print(f"Result(Points): {tree.result}")
-    print(f"Result(Count): {tree.counter}")
     print(f"Result(Size): {len(tree.result)}")
     tree.graph_viz()
 

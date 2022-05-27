@@ -37,7 +37,7 @@ def read_data_from_file(filepath: str):
                         counter += 1
                         continue
                     value_list = list(map(int, line.split()))
-                    points_list.append(Point(value_list[1], value_list[2]))
+                    points_list.append(Point(value_list[0], value_list[1]))
                     points_quantity += 1
 
             return points_list, search_list
@@ -251,12 +251,6 @@ class SegmentTree:
                     for cluster in item:
                         if self.check_axis_y(cluster.y, self.y_cords[0], self.y_cords[1]):
                             self.result.add(cluster)
-            else:
-                if node.right is not None:
-                    self.query_right(node)
-        else:
-            if node.left is not None:
-                self.query_left(node)
 
         return res
 
@@ -290,10 +284,11 @@ class SegmentTree:
 
 
 if __name__ == "__main__":
-    point_list, search_list = read_data_from_file("data/data.txt")
+    point_list, search_list = read_data_from_file("data/10000points")
     tree = SegmentTree(point_list, search_list)
     tree.query()
     print(f"Result(Points): {tree.result}")
+    print(tree.counter)
     print(f"Result(Size): {len(tree.result)}")
     tree.graph_viz()
 

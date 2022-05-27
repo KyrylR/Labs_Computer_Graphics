@@ -9,7 +9,7 @@ def performance(func):
         t1 = time()
         result = func(*args, **kwargs)
         t2 = time()
-        print(f'It took {t2 - t1} s')
+        print(f'Function: {func} took {t2 - t1} s')
         return result
 
     return wrapper
@@ -264,6 +264,7 @@ class SegmentTree:
         with open("data/graph_viz.txt", mode='w+') as data_file:
             data_file.write(wrapper[0])
 
+    @performance
     def plot_points(self, figure, axes, points, res_points, search_reg):
         for index, point in enumerate(points):
             if point in res_points:
@@ -284,7 +285,7 @@ class SegmentTree:
 
 
 if __name__ == "__main__":
-    point_list, search_list = read_data_from_file("data/10000points")
+    point_list, search_list = read_data_from_file("data/data.txt")
     tree = SegmentTree(point_list, search_list)
     tree.query()
     print(f"Result(Points): {tree.result}")

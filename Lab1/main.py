@@ -239,7 +239,7 @@ class SegmentTree:
 
     def check_segment_node(self, node: Node):
         # Add nested segments
-        res = False
+        res = True
         self.counter += 1
         if node is None or (self.x_cords[0] > node.data.right_index or self.x_cords[1] < node.data.left_index):
             return res
@@ -285,14 +285,14 @@ class SegmentTree:
 
 
 if __name__ == "__main__":
-    point_list, search_list = read_data_from_file("data/data.txt")
+    point_list, search_list = read_data_from_file("data/1000000points")
     tree = SegmentTree(point_list, search_list)
     tree.query()
-    print(f"Result(Points): {tree.result}")
+    # print(f"Result(Points): {tree.result}")
     print(f"Result(Size): {len(tree.result)}")
-    tree.graph_viz()
+    # tree.graph_viz()
 
-    figure, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
-    tree.plot_points(figure, axes, sorted(point_list, key=lambda point: point.x), tree.result, search_list)
-    tree.plot_region(axes, search_list)
-    plt.show()
+    # figure, axes = plt.subplots(nrows=1, ncols=1, figsize=(10, 10))
+    # tree.plot_points(figure, axes, sorted(point_list, key=lambda point: point.x), tree.result, search_list)
+    # tree.plot_region(axes, search_list)
+    # plt.show()
